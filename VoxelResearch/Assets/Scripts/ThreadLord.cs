@@ -20,29 +20,77 @@ public class ThreadLord : MonoBehaviour
         public Action job;
     }
 
+    public class Vec3
+    {
+        public Vec3(int _x, int _y, int _z)
+        {
+            x = _x;
+            y = _y;
+            z = _z;
+        }
+        public int x;
+        public int y;
+        public int z;
+
+        //public static Vec3 operator +(Vector3 a, Vec3 b)
+        //{
+        //    return new Vector3(a.x + b.x, a.y + b.y);
+        //}
+    }
+
     public enum ThreadTypes { Water, Sound, Terrain, Serialization }
     
     [SerializeField]
     private int[] m_ThreadCounts;
+    [SerializeField]
     private List<Peon>[] m_ThreadLists = { new List<Peon>(), new List<Peon>(), new List<Peon>(), new List<Peon>() };
 
     private List<Job> m_Backlog = new List<Job>();
 
     void Start()
     {
-        for (int i = 0; i < 100; ++i)
+        for (int i = 0; i < 10; ++i)
         {
             int id = i;
-            int priority = (int)(UnityEngine.Random.value * 100f);
-            CreateJob(ThreadTypes.Water, priority, () => Nothing(0, id, priority));
-            Debug.Log("Thread Count: " + m_ThreadLists[0].Count);
+            int priority = 0;
+            CreateJob(ThreadTypes.Water, priority, () => Nothing(priority, new Vector3(1 * i,0,0)));
+            //Debug.Log("Thread Count: " + m_ThreadLists[0].Count);
         }
 
-        //for (int i = 0; i < m_WaterThreads.Count; ++i)
-        //{
-        //    m_WaterThreads[i].GetToWork();
-        //    Debug.Log(i + " Thread Started");
-        //}
+        for (int i = 0; i < 10; ++i)
+        {
+            //m_ThreadLists[(int)ThreadTypes.Water][i].GetToWork();
+        }
+    }
+
+    //TESTING ONLY
+    public GameObject box;
+    public int totalBoxes;
+    public List<GameObject> Boxes = new List<GameObject>();
+    public List<Vector3> BoxQue = new List<Vector3>();
+    public int threadsMade = 0;
+    System.Random rnd = new System.Random(DateTime.Now.Millisecond);
+    public void Nothing(int priority, Vector3 spawnPoint)
+    {
+        BoxQue.Add(spawnPoint);
+
+        System.Threading.Thread.Sleep(17);
+        
+        if (Boxes.Count + BoxQue.Count < totalBoxes)
+        {
+            Vector3 newSpawn = spawnPoint;
+            newSpawn.x += rnd.Next(0, 2);
+            newSpawn.y += rnd.Next(0, 2);
+            newSpawn.z += rnd.Next(0, 2);
+            CreateJob(ThreadTypes.Water, priority, () => Nothing(priority + 1, newSpawn));
+            Debug.Log("Building...");
+        }
+    }
+
+    public void NewBox(Vector3 spawnPoint)
+    {
+        GameObject newBox = Instantiate(box, spawnPoint, Quaternion.identity) as GameObject;
+        Boxes.Add(newBox);
     }
 
     void Update()
@@ -50,6 +98,13 @@ public class ThreadLord : MonoBehaviour
         UpdateWorkers();
 
         HandleBacklog();
+
+        threadsMade = m_ThreadLists[(int)ThreadTypes.Water].Count;
+        if (BoxQue.Count > 0)
+        {
+            NewBox(BoxQue[0]);
+            BoxQue.RemoveAt(0);
+        }
     }
 
     public void CreateJob(ThreadTypes type, int priority, Action job)
@@ -88,17 +143,6 @@ public class ThreadLord : MonoBehaviour
         m_Backlog.Add(new Job(type, priority, job));
     }
 
-    //TESTING ONLY
-    public void Nothing(float tni, int thread, int priority)
-    {
-        int id = thread;
-        while(tni < 100f)
-        {
-            tni += 1f;
-            Debug.Log("Thread: " + id + " - Priority: " + priority + " - Count: " + tni);
-        }
-    }
-
     private void SortList(ref List<Peon> list)
     {
         List<Peon> newList = list.OrderByDescending(o => o.priority).ToList();
@@ -127,12 +171,17 @@ public class ThreadLord : MonoBehaviour
 
     private void HandleBacklog()
     {
-        SortBacklogs(ref m_Backlog);
+        //SortBacklogs(ref m_Backlog);
         bool jobGiven = false;
         if (m_Backlog.Count > 0)
         {
             for (int i = 0; i < m_Backlog.Count; ++i)
             {
+                if(m_Backlog[i] == null)
+                {
+                    m_Backlog.RemoveAt(i);
+                    return;
+                }
                 for (int j = 0; j < m_ThreadLists[(int)(m_Backlog[i].type)].Count; ++j)
                 {
                     if (!m_ThreadLists[(int)(m_Backlog[i].type)][j].working)
@@ -140,12 +189,8 @@ public class ThreadLord : MonoBehaviour
                         m_ThreadLists[(int)(m_Backlog[i].type)][j].NewJob(m_Backlog[i].priority, m_Backlog[i].job);
                         m_Backlog.RemoveAt(i);
                         jobGiven = true;
-                        break;
+                        return;
                     }
-                }
-                if (jobGiven == true)
-                {
-                    break;
                 }
             }
         }
