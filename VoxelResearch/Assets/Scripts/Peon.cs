@@ -9,9 +9,18 @@ public class Peon
     public bool working = false;
     public int priority;
 
-    public void Init(Action func)
+    public Peon(int _priority, Action func)
     {
+        priority = _priority;
         m_Thread = new Thread(() => func());
+        GetToWork();
+    }
+
+    public void NewJob(int _priority, Action func)
+    {
+        priority = _priority;
+        m_Thread = new Thread(() => func());
+        GetToWork();
     }
 
     public void GetToWork()

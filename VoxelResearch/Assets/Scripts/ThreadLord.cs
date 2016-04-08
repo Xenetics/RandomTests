@@ -21,24 +21,22 @@ public class ThreadLord : MonoBehaviour
     }
 
     public enum ThreadTypes { Water, Sound, Terrain, Serialization }
-
+    
     [SerializeField]
     private int[] m_ThreadCounts;
-
-    private List<Peon> m_WaterThreads = new List<Peon>();
-    private List<Peon> m_SoundThreads = new List<Peon>();
-    private List<Peon> m_TerrainThreads = new List<Peon>();
-    private List<Peon> m_SerializationThreads = new List<Peon>();
+    private List<Peon>[] m_ThreadLists = { new List<Peon>(), new List<Peon>(), new List<Peon>(), new List<Peon>() };
 
     private List<Job> m_Backlog = new List<Job>();
 
     void Start()
     {
-        //for (int i = 0; i < 1; ++i)
-        //{
-        //    CreatePeon(ThreadTypes.Water, 1, () => Nothing(0, i));
-        //    Debug.Log("Thread Count: " + m_WaterThreads.Count);
-        //}
+        for (int i = 0; i < 100; ++i)
+        {
+            int id = i;
+            int priority = (int)(UnityEngine.Random.value * 100f);
+            CreateJob(ThreadTypes.Water, priority, () => Nothing(0, id, priority));
+            Debug.Log("Thread Count: " + m_ThreadLists[0].Count);
+        }
 
         //for (int i = 0; i < m_WaterThreads.Count; ++i)
         //{
@@ -50,77 +48,39 @@ public class ThreadLord : MonoBehaviour
     void Update()
     {
         UpdateWorkers();
+
+        HandleBacklog();
     }
 
-    public void StartJob(ThreadTypes type, int priority, Action job)
+    public void CreateJob(ThreadTypes type, int priority, Action job)
     {
         bool jobTaken = false;
-        switch (type)
+        for(int i = 0; i < m_ThreadLists[(int)type].Count; ++i)
         {
-            case ThreadTypes.Water:
-                for(int i = 0; i < m_WaterThreads.Count; ++i)
-                {
-                    if(!m_WaterThreads[i].working)
-                    {
-                        m_WaterThreads[i].priority = priority;
-                        m_WaterThreads[i].Init(job);
-                        jobTaken = true;
-                        break;
-                    }
-                }
-
-                if(!jobTaken && m_WaterThreads.Count < m_ThreadCounts[(int)type])
-                {
-                    CreatePeon(type, priority, job);
-                }
-                else
-                {
-                    BacklogJob(type, priority, job);
-                }
+            if(!m_ThreadLists[(int)type][i].working)
+            {
+                m_ThreadLists[(int)type][i].NewJob(priority, job);
+                jobTaken = true;
                 break;
-            case ThreadTypes.Sound:
+            }
+        }
 
-                break;
-            case ThreadTypes.Terrain:
-
-                break;
-            case ThreadTypes.Serialization:
-
-                break;
+        if(!jobTaken && m_ThreadLists[(int)type].Count < m_ThreadCounts[(int)type])
+        {
+            CreatePeon(type, priority, job);
+        }
+        else
+        {
+            BacklogJob(type, priority, job);
         }
     }
 
     public void CreatePeon(ThreadTypes type, int priority, Action job)
     {
         Peon newPeon;
-        switch(type)
-        {
-            case ThreadTypes.Water:
-                newPeon = new Peon();
-                newPeon.priority = priority;
-                newPeon.Init(job);
-                m_WaterThreads.Add(newPeon);
-                SortList(ref m_WaterThreads);
-                break;
-            case ThreadTypes.Sound:
-                newPeon = new Peon();
-                newPeon.priority = priority;
-                newPeon.Init(job);
-                m_SoundThreads.Add(newPeon);
-                break;
-            case ThreadTypes.Terrain:
-                newPeon = new Peon();
-                newPeon.priority = priority;
-                newPeon.Init(job);
-                m_TerrainThreads.Add(newPeon);
-                break;
-            case ThreadTypes.Serialization:
-                newPeon = new Peon();
-                newPeon.priority = priority;
-                newPeon.Init(job);
-                m_SerializationThreads.Add(newPeon);
-                break;
-        }
+        newPeon = new Peon(priority, job);
+        m_ThreadLists[(int)type].Add(newPeon);
+        SortList(ref m_ThreadLists[(int)type]);
     }
 
     public void BacklogJob(ThreadTypes type, int priority, Action job)
@@ -129,16 +89,14 @@ public class ThreadLord : MonoBehaviour
     }
 
     //TESTING ONLY
-    public void Nothing(float tni, int thread)
+    public void Nothing(float tni, int thread, int priority)
     {
         int id = thread;
         while(tni < 100f)
         {
             tni += 1f;
-            Debug.Log("Thread " + id + " " + tni);
+            Debug.Log("Thread: " + id + " - Priority: " + priority + " - Count: " + tni);
         }
-
-        m_WaterThreads[id].EndWork();
     }
 
     private void SortList(ref List<Peon> list)
@@ -147,60 +105,48 @@ public class ThreadLord : MonoBehaviour
         list = newList;
     }
 
+    private void SortBacklogs(ref List<Job> list)
+    {
+        List<Job> newList = list.OrderByDescending(o => o.priority).ToList();
+        list = newList;
+    }
+
     private void UpdateWorkers()
     {
-        for (int i = 0; i < m_WaterThreads.Count; ++i)
+        for (int i = 0; i < m_ThreadLists.Length; ++i)
         {
-            m_WaterThreads[i].Status();
-        }
-        for (int i = 0; i < m_WaterThreads.Count; ++i)
-        {
-            m_WaterThreads[i].Status();
-        }
-        for (int i = 0; i < m_WaterThreads.Count; ++i)
-        {
-            m_WaterThreads[i].Status();
-        }
-        for (int i = 0; i < m_WaterThreads.Count; ++i)
-        {
-            m_WaterThreads[i].Status();
+            if (m_ThreadLists[i].Count >= m_ThreadCounts[(int)ThreadTypes.Water])
+            {
+                for (int j = 0; j < m_ThreadLists[i].Count; ++j)
+                {
+                    m_ThreadLists[i][j].Status();
+                }
+            }
         }
     }
 
     private void HandleBacklog()
     {
-        for(int i = 0; i < m_Backlog.Count; ++i)
+        SortBacklogs(ref m_Backlog);
+        bool jobGiven = false;
+        if (m_Backlog.Count > 0)
         {
-            switch (m_Backlog[i].type)
+            for (int i = 0; i < m_Backlog.Count; ++i)
             {
-                case ThreadTypes.Water:
-                    if (m_WaterThreads.Count < m_ThreadCounts[(int)m_Backlog[i].type])
+                for (int j = 0; j < m_ThreadLists[(int)(m_Backlog[i].type)].Count; ++j)
+                {
+                    if (!m_ThreadLists[(int)(m_Backlog[i].type)][j].working)
                     {
-                        for (int j = 0; j < m_WaterThreads.Count; ++j)
-                        {
-                            if (!m_WaterThreads[j].working)
-                            {
-                                m_WaterThreads[j].priority = m_Backlog[i].priority;
-                                m_WaterThreads[j].Init(m_Backlog[i].job);
-                                m_Backlog.RemoveAt(i);
-                                break;
-                            }
-                        }
+                        m_ThreadLists[(int)(m_Backlog[i].type)][j].NewJob(m_Backlog[i].priority, m_Backlog[i].job);
+                        m_Backlog.RemoveAt(i);
+                        jobGiven = true;
+                        break;
                     }
+                }
+                if (jobGiven == true)
+                {
                     break;
-                case ThreadTypes.Sound:
-
-                    break;
-                case ThreadTypes.Terrain:
-
-                    break;
-                case ThreadTypes.Serialization:
-
-                    break;
-            }
-            if(m_Backlog[i] == null)
-            {
-                break;
+                }
             }
         }
     }
