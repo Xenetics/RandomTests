@@ -20,24 +20,6 @@ public class ThreadLord : MonoBehaviour
         public Action job;
     }
 
-    public class Vec3
-    {
-        public Vec3(int _x, int _y, int _z)
-        {
-            x = _x;
-            y = _y;
-            z = _z;
-        }
-        public int x;
-        public int y;
-        public int z;
-
-        //public static Vec3 operator +(Vector3 a, Vec3 b)
-        //{
-        //    return new Vector3(a.x + b.x, a.y + b.y);
-        //}
-    }
-
     public enum ThreadTypes { Water, Sound, Terrain, Serialization }
     
     [SerializeField]
@@ -100,8 +82,9 @@ public class ThreadLord : MonoBehaviour
         HandleBacklog();
 
         threadsMade = m_ThreadLists[(int)ThreadTypes.Water].Count;
-        if (BoxQue.Count > 0)
-        {
+        int count = BoxQue.Count;
+        for(int i = 0; i < count; i++)
+        { 
             NewBox(BoxQue[0]);
             BoxQue.RemoveAt(0);
         }
