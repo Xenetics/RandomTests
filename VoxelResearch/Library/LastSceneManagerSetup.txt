@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/Scene/testSound.unity
+  isLoaded: 1
+  isActive: 1

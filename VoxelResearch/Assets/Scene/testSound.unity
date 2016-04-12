@@ -485,12 +485,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 779fcb0ab1f3e29409a46817598df639, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ThreadCounts: 0a000000000000001400000014000000
+  m_ThreadCounts: 14000000000000001400000014000000
   box: {fileID: 100000, guid: db8224b4e965b01488a25be295962537, type: 3}
-  totalBoxes: 1000
+  totalBoxes: 10000
+  boxesPerFrame: 20
+  boxesMade: 0
   Boxes: []
   BoxQue: []
   threadsMade: 0
+  seed: -1464599729
 --- !u!1 &980123584
 GameObject:
   m_ObjectHideFlags: 0
@@ -1619,6 +1622,18 @@ Prefab:
     - target: {fileID: 100000, guid: db8224b4e965b01488a25be295962537, type: 3}
       propertyPath: m_Layer
       value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: db8224b4e965b01488a25be295962537, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: db8224b4e965b01488a25be295962537, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: db8224b4e965b01488a25be295962537, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: db8224b4e965b01488a25be295962537, type: 3}
